@@ -1,0 +1,123 @@
+﻿@{
+    ViewData["Title"] = "UploadCSV";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using System.Data;
+@model IEnumerable<ProductIngestCsv>
+<h2>Please upload CSV file</h2>
+<hr />
+
+<span>
+    To download sample template file Please
+    <a href="https://growecomm.s3.ap-southeast-2.amazonaws.com/ProudPoppy/ProudPoppy_Sample_template.csv" download>click here</a>
+</span>
+
+<hr />
+<form id="shopifyform" asp-controller="FileUploadCSV" asp-action="UploadCSV" method="post" enctype="multipart/form-data">
+    <input type="file" name="postedFile" />
+    <input type="submit" value="Upload" />
+</form>
+<hr />
+<span style="color:red">@Html.Raw(ViewBag.ErrorMessage)</span>
+@if (Model != null)
+{
+    <table class="table table-bordered table-responsive table-hover">
+        <tr>
+
+            <th>
+                @Html.DisplayNameFor(model => model.SKU)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Description)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Brand)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Category)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Tags)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SalePrice)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CostPrice)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RRP)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Size)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Colour)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+            </th>
+        </tr>
+
+        @foreach (var item in Model)
+        {
+            <tr>
+
+                <td>@item.SKU</td>
+                <td>@item.Name</td>
+                <td>@item.Description</td>
+                <td>@item.Brand</td>
+                <td>@item.Category</td>
+                <td>@item.Tags</td>
+                <td>@item.SalePrice</td>
+                <td>@item.CostPrice</td>
+                <td>@item.RRP</td>
+                <td>@item.Size</td>
+                <td>@item.Colour</td>
+                <td>@item.Status</td>
+            </tr>
+        }
+
+    </table>
+    <form asp-controller="FileUploadCSV" asp-action="UploadToShopify" method="post">
+        <div id="overlay">
+            <div class="w-100 d-flex justify-content-center align-items-center">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <input type="button" id="submitButton" value="Import Data" onclick="sendData(@Newtonsoft.Json.JsonConvert.SerializeObject(Model))" />
+    </form>
+}
+
+<script>
+
+    function sendData(uploadDataList) {
+        loaderOn();
+        $.ajax({
+            type: "POST",
+            url: "/FileUploadCSV/UploadToShopify",
+            data: JSON.stringify(uploadDataList),
+            contentType: "application/json",
+            success: function (result) {
+                loaderOff();
+                alert('Products successfully uploaded.');
+            },
+            error: function (result) {
+                loaderOff();
+                alert('error:' + result);
+            }
+        });
+    }
+
+    function loaderOn() {
+        document.getElementById("overlay").style.display = "flex";
+    }
+
+    function loaderOff() {
+        document.getElementById("overlay").style.display = "none";
+    }
+</script>

@@ -1,0 +1,43 @@
+﻿@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@model ProudPoppy.Models.ImageDetails
+
+<h2>Please upload product images</h2>
+
+<hr />
+
+<p>Image name should be in format - <b>{ProductSku}_{Colour}_{Position}.{ImageExtention}</b></p>
+<p>Example - </p>
+<span>ProductSku = 'EOS-W23-JOYCE-SK'</span>
+<br />
+<span>Colour = 'Black'</span>
+<br />
+<span>Position = 1</span> (Position can be 1 or 2 or 3 etc, Position = 1 can be considered as main product image)
+<br />
+<span>ImageExtention = png</span>
+<br />
+<span>So your file name could be <b>EOS-W23-JOYCE-SK_Black_1.png</b></span>
+<hr />
+
+<form asp-action="UploadImages" enctype="multipart/form-data" onsubmit="loaderOn();">
+    @Html.TextBoxFor(model => model.ImageFile, "", new { @type = "file", @multiple = "multiple", @accept = "image/png, image/jpeg" })
+    <input type="submit" value="Upload Images" />
+    </br>
+    <span style="color:green">@Html.Raw(ViewBag.SuccessMessage)</span>
+    <span style="color:red">@Html.Raw(ViewBag.ErrorMessage)</span>
+
+    <div id="overlay">
+        <div class="w-100 d-flex justify-content-center align-items-center">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</form>
+<script>
+
+    function loaderOn() {
+        document.getElementById("overlay").style.display = "flex";
+    }
+</script>
