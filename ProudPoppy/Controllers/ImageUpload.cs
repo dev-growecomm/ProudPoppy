@@ -1,22 +1,26 @@
 ﻿using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MySqlConnector;
+using Microsoft.EntityFrameworkCore;
+using ProudPoppy.Data;
 using ProudPoppy.Models;
 using ShopifySharp;
-using System.Data;
 using System.Net;
 
 namespace ProudPoppy.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class ImageUpload : Controller
     {
         IConfiguration _configuration;
+        private readonly ProudPoppyContext _context;
 
-        public ImageUpload(IConfiguration configuration)
+        public ImageUpload(IConfiguration configuration, ProudPoppyContext context)
         {
             _configuration = configuration;
+            _context = context;
         }
 
         // GET: ImageUpload
@@ -67,27 +71,15 @@ namespace ProudPoppy.Controllers
                             string variantColour = fileNameSplit[1];
                             string position = fileNameSplit[2].Split(".")[0];
 
-                            var productId = new object();
-
-                            var ConnectionString = _configuration.GetConnectionString("ShopifyProductUploadDbContext");
-                            using (MySqlConnection mConnection = new MySqlConnection(ConnectionString))
-                            {
-                                string query = $"Select ProductId from product_details where SKU='{sku}'";
-                                mConnection.Open();
-                                using (MySqlCommand myCmd = new MySqlCommand(query, mConnection))
-                                {
-                                    myCmd.CommandType = CommandType.Text;
-                                    productId = myCmd.ExecuteScalar();
-                                }
-                            }
+                            var productDetails = await _context.ProductDetails.FirstOrDefaultAsync(m => m.SKU == sku);
 
                             string shopifyUrl = _configuration.GetSection("sopify:shopifyUrl").Value;
                             string shopAccessToken = _configuration.GetSection("sopify:shopAccessToken").Value;
-                            if (productId != null && !string.IsNullOrEmpty(productId.ToString()))
+                            if (productDetails != null)
                             {
                                 var productImageService = new ProductImageService(shopifyUrl, shopAccessToken);
 
-                                long productIdToPass = Convert.ToInt64(productId);
+                                long productIdToPass = Convert.ToInt64(productDetails.ProductId);
                                 var image = await productImageService.CreateAsync(productIdToPass, new ProductImage()
                                 {
                                     Metafields = new List<MetaField>()
@@ -107,20 +99,9 @@ namespace ProudPoppy.Controllers
 
                                 if (Convert.ToInt32(position) == 1)
                                 {
-                                    var variantIds = new object();
-                                    using (MySqlConnection mConnection = new MySqlConnection(ConnectionString))
+                                    if (productDetails.VariantIds != null)
                                     {
-                                        string queryToGetVariantIds = $"Select VariantIds from product_details where SKU='{sku}'";
-                                        mConnection.Open();
-                                        using (MySqlCommand myCmd = new MySqlCommand(queryToGetVariantIds, mConnection))
-                                        {
-                                            myCmd.CommandType = CommandType.Text;
-                                            variantIds = myCmd.ExecuteScalar();
-                                        }
-                                    }
-                                    if (variantIds != null && !string.IsNullOrEmpty(variantIds.ToString()))
-                                    {
-                                        string[] variantIdList = variantIds.ToString().Split(",");
+                                        string[] variantIdList = productDetails.VariantIds.Split(",");
 
                                         foreach (var variantId in variantIdList)
                                         {

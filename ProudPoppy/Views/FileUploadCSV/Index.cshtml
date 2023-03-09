@@ -14,9 +14,25 @@
 </span>
 
 <hr />
+
+<h4>Product Description guidelines</h4>
+<p>When you want newline in product description, Please put <b>"&lt;br&gt;"</b></p>
+<div>
+    <b>Input:</b>
+    <br />
+    Shearling brings together a high-utility and stylish design for your urban hikes this season. Refined yet comfortable, these mid-high boots boast shearling-lining, detailed stitching, and a full-length inner zipper. Crafted from sumptuous Italian Nubuck leather, with a strong lug sole and signature stitch design.&lt;br&gt;Features:&lt;br&gt;• Superior comfort&lt;br&gt;• Inside zip&lt;br&gt;&lt;br&gt;Upper: Nubuck Leather&lt;br&gt;Lining: Shearling&lt;br&gt;Insole: Leather&lt;br&gt;Heel Type: LUG&lt;br&gt;Heel Height: 40mm&lt;br&gt;Outsole: TPR
+</div>
+<br />
+<div>
+    <b>Output:</b>
+    <br />
+    Shearling brings together a high-utility and stylish design for your urban hikes this season. Refined yet comfortable, these mid-high boots boast shearling-lining, detailed stitching, and a full-length inner zipper. Crafted from sumptuous Italian Nubuck leather, with a strong lug sole and signature stitch design.<br>Features:<br>• Superior comfort<br>• Inside zip<br><br>Upper: Nubuck Leather<br>Lining: Shearling<br>Insole: Leather<br>Heel Type: LUG<br>Heel Height: 40mm<br>Outsole: TPR
+</div>
+
+<hr />
 <form id="shopifyform" asp-controller="FileUploadCSV" asp-action="UploadCSV" method="post" enctype="multipart/form-data">
     <input type="file" name="postedFile" />
-    <input type="submit" value="Upload" />
+    <input type="submit" class="btn btn-info" value="Upload" />
 </form>
 <hr />
 <span style="color:red">@Html.Raw(ViewBag.ErrorMessage)</span>
@@ -89,7 +105,9 @@
                 <div class="spinner"></div>
             </div>
         </div>
-        <input type="button" id="submitButton" value="Import Data" onclick="sendData(@Newtonsoft.Json.JsonConvert.SerializeObject(Model))" />
+        <div>
+            <input type="button" class="btn btn-primary" id="submitButton" value="Import Data" onclick="sendData(@Newtonsoft.Json.JsonConvert.SerializeObject(Model))" />
+        </div>
     </form>
 }
 
@@ -120,4 +138,5 @@
     function loaderOff() {
         document.getElementById("overlay").style.display = "none";
     }
+
 </script>

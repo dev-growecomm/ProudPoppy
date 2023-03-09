@@ -28,6 +28,25 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="ImageUpload" asp-action="Index">Image Upload</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="ProductDetails" asp-action="ExistingProducts">Save Existing Products</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="ProductDetails" asp-action="Index">Products</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (@User.Identity != null && !string.IsNullOrEmpty(@User.Identity?.Name))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" title="Manage">Hello @User.Identity?.Name!</a>
+                            </li>
+                            <li class="nav-item">
+                                <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="btn btn-info">Logout</button>
+                                </form>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>

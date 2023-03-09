@@ -24,7 +24,7 @@
 
 <form asp-action="UploadImages" enctype="multipart/form-data" onsubmit="loaderOn();">
     @Html.TextBoxFor(model => model.ImageFile, "", new { @type = "file", @multiple = "multiple", @accept = "image/png, image/jpeg" })
-    <input type="submit" value="Upload Images" />
+    <input type="submit" class="btn btn-primary" value="Upload Images" />
     </br>
     <span style="color:green">@Html.Raw(ViewBag.SuccessMessage)</span>
     <span style="color:red">@Html.Raw(ViewBag.ErrorMessage)</span>

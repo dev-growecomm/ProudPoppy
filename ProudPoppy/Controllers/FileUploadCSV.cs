@@ -10,16 +10,21 @@ using RestSharp;
 using System.Web;
 using System.Reflection;
 using ProudPoppy.Models;
+using Microsoft.AspNetCore.Authorization;
+using ProudPoppy.Data;
 
 namespace ProudPoppy.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class FileUploadCSV : Controller
     {
         IConfiguration _configuration;
+        private readonly ProudPoppyContext _context;
 
-        public FileUploadCSV(IConfiguration configuration)
+        public FileUploadCSV(IConfiguration configuration, ProudPoppyContext context)
         {
             _configuration = configuration;
+            _context = context;
         }
 
         public IActionResult Index()
@@ -48,7 +53,7 @@ namespace ProudPoppy.Controllers
 
                     List<ProductIngestCsv> fileIngests = new List<ProductIngestCsv>();
 
-                    using (var reader = new StreamReader(filePath, encoding: Encoding.Latin1, true))
+                    using (var reader = new StreamReader(filePath, encoding: Encoding.Latin1, false))
                     {
                         using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                         {
@@ -56,17 +61,13 @@ namespace ProudPoppy.Controllers
                         }
                     }
 
-                    //foreach (var item in fileIngests)
-                    //{
-                    //    item.Description = HttpUtility.HtmlDecode(item.Description);
-                    //}
                     return View("Index", fileIngests);
                 }
                 else
                 {
                     ViewBag.ErrorMessage += string.Format("<b>{0}</b> file format is not supported. Please upload valid CSV file.<br />", postedFile.FileName);
                 }
-                
+
             }
 
             return View("Index");
@@ -126,7 +127,7 @@ namespace ProudPoppy.Controllers
                         var product = new Product()
                         {
                             Title = item.Name,
-                            BodyHtml = HttpUtility.HtmlEncode(item.Description),
+                            BodyHtml = item.Description,
                             Vendor = item.Brand,
                             ProductType = item.Category,
                             Tags = item.Tags,
@@ -163,7 +164,7 @@ namespace ProudPoppy.Controllers
                             var response = _restClient.Put<dynamic>(request);
                         }
 
-                        SaveRecordInDb(item, product.Id.Value, variantIds);
+                        await SaveRecordInDb(item, product.Id.Value, variantIds);
                     }
                 }
 
@@ -178,53 +179,35 @@ namespace ProudPoppy.Controllers
 
         private bool CheckIsRecordExist(ProductIngestCsv item)
         {
-            bool isRecordPresent = false;
-            var ConnectionString = _configuration.GetConnectionString("ShopifyProductUploadDbContext");
-            using (MySqlConnection mConnection = new MySqlConnection(ConnectionString))
-            {
-                mConnection.Open();
-                using (MySqlCommand myCmd = new MySqlCommand($"Select id from product_details where `SKU`='{item.SKU}'", mConnection))
-                {
-                    myCmd.CommandType = CommandType.Text;
-                    var result = myCmd.ExecuteReader();
-                    if (result.HasRows)
-                    {
-                        isRecordPresent = true;
-                    }
-                }
-            }
+            bool isRecordPresent = _context.ProductDetails.Any(e => e.SKU == item.SKU);
             return isRecordPresent;
         }
 
-        private void SaveRecordInDb(ProductIngestCsv item, long productId, List<string> variantIds)
+        private async Task SaveRecordInDb(ProductIngestCsv item, long productId, List<string> variantIds)
         {
-            List<string> Rows = new List<string>();
-            Rows.Add(string.Format("'{0}','{1}','{2}','{3}','{4}','{5}'", MySqlHelper.EscapeString(item.SKU),
-                MySqlHelper.EscapeString(item.Name), MySqlHelper.EscapeString(item.Description), MySqlHelper.EscapeString(item.Brand),
-                MySqlHelper.EscapeString(item.Category), MySqlHelper.EscapeString(item.Tags)));
 
-            Rows.Add(string.Format("'{0}','{1}','{2}','{3}','{4}','{5}'", MySqlHelper.EscapeString(item.SalePrice),
-                MySqlHelper.EscapeString(item.CostPrice), MySqlHelper.EscapeString(item.CostPrice), MySqlHelper.EscapeString(item.Size),
-                MySqlHelper.EscapeString(item.Colour), MySqlHelper.EscapeString(item.Status)));
-
-            Rows.Add(string.Format("'{0}','{1}','{2}', '{3}'", MySqlHelper.EscapeString(DateTime.Now.ToString()),
-                MySqlHelper.EscapeString(DateTime.Now.ToString()), productId, string.Join(", ", variantIds)));
-
-            StringBuilder sCommand = new StringBuilder("INSERT INTO product_details (`SKU`, `Name`, `Description`, " +
-                $"`Brand`, `Category`, `Tags`, `SalePrice`, `CostPrice`, `RRP`, `Size`, `Colour`, `Status`, `DateCreated`, `DateLastModified`, `ProductId`, `VariantIds`) VALUES (");
-
-            var ConnectionString = _configuration.GetConnectionString("ShopifyProductUploadDbContext");
-            using (MySqlConnection mConnection = new MySqlConnection(ConnectionString))
+            var productDetails = new ProductDetails
             {
-                sCommand.Append(string.Join(",", Rows));
-                sCommand.Append(");");
-                mConnection.Open();
-                using (MySqlCommand myCmd = new MySqlCommand(sCommand.ToString(), mConnection))
-                {
-                    myCmd.CommandType = CommandType.Text;
-                    myCmd.ExecuteNonQuery();
-                }
-            }
+                ProductId = productId,
+                VariantIds = string.Join(", ", variantIds),
+                SKU = item.SKU,
+                Name = item.Name,
+                Description = item.Description,
+                Brand = item.Brand,
+                Category = item.Category,
+                Tags = item.Tags,
+                SalePrice = item.SalePrice,
+                CostPrice = item.CostPrice,
+                RRP = item.RRP,
+                Size = item.Size,
+                Colour = item.Colour,
+                Status = item.Status,
+                DateCreated = DateTime.Now.ToString(),
+                DateLastModified = DateTime.Now.ToString()
+            };
+
+            _context.Add(productDetails);
+            await _context.SaveChangesAsync();
         }
     }
 }
