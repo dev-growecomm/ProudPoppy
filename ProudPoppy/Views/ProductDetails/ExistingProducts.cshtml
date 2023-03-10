@@ -4,9 +4,25 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h3>SaveExistingProducts</h3>
-
+<h2>SaveExistingProducts</h2>
+@*
 <form id="shopifyform" asp-controller="ProductDetails" asp-action="SaveExistingProducts" method="post">
     <input type="submit" value="SaveExistingProducts" />
-</form>
+</form>*@
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <form asp-controller="ProductDetails" asp-action="SaveExistingProducts" method="post">
+                <div class="form-group">
+                    <label>Status</label>
+                    <input type="text" class="form-control" id="status" name="status" placeholder="draft or active">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Save Existing Products</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 

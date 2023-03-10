@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +11,11 @@ using ProudPoppy.Data;
 using ProudPoppy.Models;
 using ShopifySharp;
 using ShopifySharp.Filters;
+using ShopifySharp.Lists;
 
 namespace ProudPoppy.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class ProductDetailsController : Controller
     {
         private readonly ProudPoppyContext _context;
@@ -168,19 +172,82 @@ namespace ProudPoppy.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SaveExistingProducts()
+        public async Task<IActionResult> SaveExistingProducts(string status)
         {
             string shopifyUrl = _configuration.GetSection("sopify:shopifyUrl").Value;
             string shopAccessToken = _configuration.GetSection("sopify:shopAccessToken").Value;
 
             var productService = new ProductService(shopifyUrl, shopAccessToken);
 
-            //var filter = new ProductListFilter()
-            //{
-            //    Status = "draft"
-            //};
-            var products = await productService.ListAsync();
+            var filter = new ProductListFilter()
+            {
+                Status = status,
+                Limit = 250
+            };
 
+            var products = await productService.ListAsync(filter);
+
+            if (products != null)
+            {
+
+                await SaveProducts(products);
+
+                if (products.HasNextPage)
+                {
+                    var nextFilter = products.GetNextPageFilter(250);
+                    var nextProducts = await productService.ListAsync(nextFilter);
+                    await SaveProducts(nextProducts);
+
+                    if (nextProducts.HasNextPage)
+                    {
+                        var nextToNextFilter = nextProducts.GetNextPageFilter(250);
+                        var nextToNextProducts = await productService.ListAsync(nextToNextFilter);
+                        await SaveProducts(nextToNextProducts);
+
+                        if (nextToNextProducts.HasNextPage)
+                        {
+                            var nextToNextToNextFilter = nextToNextProducts.GetNextPageFilter(250);
+                            var nextToNextToNextProducts = await productService.ListAsync(nextToNextToNextFilter);
+                            await SaveProducts(nextToNextToNextProducts);
+
+                            if (nextToNextToNextProducts.HasNextPage)
+                            {
+                                var next5Filter = nextToNextToNextProducts.GetNextPageFilter(250);
+                                var next5Products = await productService.ListAsync(next5Filter);
+                                await SaveProducts(next5Products);
+
+                                if (next5Products.HasNextPage)
+                                {
+                                    var next6Filter = next5Products.GetNextPageFilter(250);
+                                    var next6Products = await productService.ListAsync(next6Filter);
+                                    await SaveProducts(next6Products);
+
+                                    if (next6Products.HasNextPage)
+                                    {
+                                        var next7Filter = next6Products.GetNextPageFilter(250);
+                                        var next7Products = await productService.ListAsync(next7Filter);
+                                        await SaveProducts(next7Products);
+
+                                        if (next7Products.HasNextPage)
+                                        {
+                                            var next8Filter = next7Products.GetNextPageFilter(250);
+                                            var next8Products = await productService.ListAsync(next8Filter);
+                                            await SaveProducts(next8Products);
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            return View("ExistingProducts");
+        }
+
+        private async Task SaveProducts(ListResult<Product> products)
+        {
             foreach (var product in products.Items)
             {
                 var isProductExist = _context.ProductDetails.Any(e => e.ProductId == product.Id);
@@ -223,14 +290,14 @@ namespace ProudPoppy.Controllers
                         RRP = product.Variants.Any() ? product.Variants.First().CompareAtPrice.ToString() : null,
                         Size = sizes,
                         Colour = colours.Any() ? string.Join(",", colours) : null,
-                        Status = product.Status
+                        Status = product.Status,
+                        DateCreated = DateTime.Now.ToString(),
+                        DateLastModified = DateTime.Now.ToString(),
                     };
                     _context.Add(productDetails);
                 }
             }
             await _context.SaveChangesAsync();
-
-            return View("ExistingProducts");
         }
     }
 }

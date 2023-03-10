@@ -12,6 +12,11 @@ using System.Reflection;
 using ProudPoppy.Models;
 using Microsoft.AspNetCore.Authorization;
 using ProudPoppy.Data;
+using Amazon.S3.Model;
+using Microsoft.CodeAnalysis;
+using System.Drawing.Drawing2D;
+using System.Drawing;
+using System.Xml.Linq;
 
 namespace ProudPoppy.Controllers
 {
@@ -83,13 +88,13 @@ namespace ProudPoppy.Controllers
 
                 var service = new ProductService(shopifyUrl, shopAccessToken);
 
-                //var productDetails = await service.GetAsync(7887331098860);
+
 
                 foreach (var item in uploadDataList)
                 {
-                    bool isRecordPresent = CheckIsRecordExist(item);
+                    var productDetails = CheckIsRecordExist(item);
 
-                    if (!isRecordPresent)
+                    if (productDetails != null && productDetails.ProductId > 0)
                     {
                         var variants = new List<ProductVariant>();
 
@@ -124,47 +129,62 @@ namespace ProudPoppy.Controllers
                             Position = 2
                         });
 
-                        var product = new Product()
+                        var product = await service.GetAsync(productDetails.ProductId);
+                        //var product = new Product();
+
+                        if (string.IsNullOrWhiteSpace(item.Name))
+                            product.Title = item.Name;
+
+                        if (string.IsNullOrWhiteSpace(item.Description))
+                            product.BodyHtml = item.Description;
+
+                        if (string.IsNullOrWhiteSpace(item.Brand))
+                            product.Vendor = item.Brand;
+
+                        if (string.IsNullOrWhiteSpace(item.Category))
+                            product.ProductType = item.Category;
+
+                        if (string.IsNullOrWhiteSpace(item.Tags))
+                            product.Tags = item.Tags;
+
+                        if (string.IsNullOrWhiteSpace(item.Status.ToLower()))
+                            product.Status = item.Status.ToLower();
+
+                        if (variants.Any())
+                            product.Variants = variants;
+
+                        if (productOptions.Any())
+                            product.Options = productOptions;
+
+                        product = await service.UpdateAsync(productDetails.ProductId, product);
+
+                        if (string.IsNullOrWhiteSpace(item.CostPrice))
                         {
-                            Title = item.Name,
-                            BodyHtml = item.Description,
-                            Vendor = item.Brand,
-                            ProductType = item.Category,
-                            Tags = item.Tags,
-                            Status = item.Status.ToLower(),
-                            Variants = variants,
-                            Options = productOptions,
-                            PublishedScope = "global"
-                        };
+                            var inventory = new Inventory();
 
-                        product = await service.CreateAsync(product);
-
-                        var inventory = new Inventory();
-
-                        List<string> variantIds = new List<string>();
-                        foreach (var variant in product.Variants)
-                        {
-                            variantIds.Add($"{variant.Id.Value}_{variant.Option1}");
-                            inventory.InventoryItems = new InventoryItems
+                            foreach (var variant in product.Variants)
                             {
-                                id = variant.InventoryItemId.Value,
-                                sku = variant.SKU,
-                                cost = Convert.ToDecimal(item.CostPrice),
-                                tracked = true
-                            };
+                                inventory.InventoryItems = new InventoryItems
+                                {
+                                    id = variant.InventoryItemId.Value,
+                                    sku = variant.SKU,
+                                    cost = Convert.ToDecimal(item.CostPrice),
+                                    tracked = true
+                                };
 
-                            string jsonData = JsonConvert.SerializeObject(inventory);
+                                string jsonData = JsonConvert.SerializeObject(inventory);
 
-                            var request = new RestRequest($"{shopifyUrl}/admin/api/2023-01/inventory_items/{inventory.InventoryItems.id}.json", Method.Put)
-                            .AddHeader("X-Shopify-Access-Token", shopAccessToken)
-                                             .AddJsonBody(jsonData);
+                                var request = new RestRequest($"{shopifyUrl}/admin/api/2023-01/inventory_items/{inventory.InventoryItems.id}.json", Method.Put)
+                                .AddHeader("X-Shopify-Access-Token", shopAccessToken)
+                                                 .AddJsonBody(jsonData);
 
-                            var _restClient = new RestClient().AddDefaultHeader("Content-Type", "application/json");
+                                var _restClient = new RestClient().AddDefaultHeader("Content-Type", "application/json");
 
-                            var response = _restClient.Put<dynamic>(request);
+                                var response = _restClient.Put<dynamic>(request);
+                            }
                         }
 
-                        await SaveRecordInDb(item, product.Id.Value, variantIds);
+                        await UpdateRecordInDb(productDetails, product);
                     }
                 }
 
@@ -177,34 +197,47 @@ namespace ProudPoppy.Controllers
 
         }
 
-        private bool CheckIsRecordExist(ProductIngestCsv item)
+        private ProductDetails CheckIsRecordExist(ProductIngestCsv item)
         {
-            bool isRecordPresent = _context.ProductDetails.Any(e => e.SKU == item.SKU);
-            return isRecordPresent;
+            ProductDetails productDetails = _context.ProductDetails.FirstOrDefault(e => e.SKU == item.SKU);
+            return productDetails;
         }
 
-        private async Task SaveRecordInDb(ProductIngestCsv item, long productId, List<string> variantIds)
+        private async Task UpdateRecordInDb(ProductDetails productDetails, Product product)
         {
+            string variantIds = string.Empty;
+            string sizes = string.Empty;
 
-            var productDetails = new ProductDetails
+            List<string> colours = new List<string>();
+
+            if (product.Variants.Any())
             {
-                ProductId = productId,
-                VariantIds = string.Join(", ", variantIds),
-                SKU = item.SKU,
-                Name = item.Name,
-                Description = item.Description,
-                Brand = item.Brand,
-                Category = item.Category,
-                Tags = item.Tags,
-                SalePrice = item.SalePrice,
-                CostPrice = item.CostPrice,
-                RRP = item.RRP,
-                Size = item.Size,
-                Colour = item.Colour,
-                Status = item.Status,
-                DateCreated = DateTime.Now.ToString(),
-                DateLastModified = DateTime.Now.ToString()
-            };
+                variantIds = string.Join(",", product.Variants.Select(x => x.Id.Value).ToArray());
+                sizes = string.Join(",", product.Variants.Select(x => x.Option1).ToArray());
+
+                foreach (var item in product.Variants)
+                {
+                    if (item.Option2 != null)
+                    {
+                        colours.Add(item.Option2);
+                    }
+                }
+            }
+
+            productDetails.VariantIds = variantIds;
+            productDetails.SKU = product.Variants.Any() ? product.Variants.First().SKU : null;
+            productDetails.Name = product.Title;
+            productDetails.Description = product.BodyHtml;
+            productDetails.Brand = product.Vendor;
+            productDetails.Category = product.ProductType;
+            productDetails.Tags = product.Tags;
+            productDetails.SalePrice = product.Variants.Any() ? product.Variants.First().Price.ToString() : null;
+            productDetails.CostPrice = product.Variants.Any() ? product.Variants.First().Price.ToString() : null;
+            productDetails.RRP = product.Variants.Any() ? product.Variants.First().CompareAtPrice.ToString() : null;
+            productDetails.Size = sizes;
+            productDetails.Colour = colours.Any() ? string.Join(",", colours) : null;
+            productDetails.Status = product.Status;
+            productDetails.DateLastModified = DateTime.Now.ToString();
 
             _context.Add(productDetails);
             await _context.SaveChangesAsync();
