@@ -68,8 +68,8 @@ namespace ProudPoppy.Controllers
 
                             var fileNameSplit = item.FileName.Split("_");
                             string sku = fileNameSplit[0];
-                            string variantColour = fileNameSplit[1];
-                            string position = fileNameSplit[2].Split(".")[0];
+                            //string variantColour = fileNameSplit[1];
+                            string position = fileNameSplit[1].Split(".")[0];
 
                             var productDetails = await _context.ProductDetails.FirstOrDefaultAsync(m => m.SKU == sku);
 
