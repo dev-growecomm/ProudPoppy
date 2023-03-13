@@ -1,22 +1,16 @@
 ﻿using CsvHelper;
 using Microsoft.AspNetCore.Mvc;
-using MySqlConnector;
 using ShopifySharp;
 using System.Data;
 using System.Globalization;
 using System.Text;
 using Newtonsoft.Json;
 using RestSharp;
-using System.Web;
 using System.Reflection;
 using ProudPoppy.Models;
 using Microsoft.AspNetCore.Authorization;
 using ProudPoppy.Data;
-using Amazon.S3.Model;
 using Microsoft.CodeAnalysis;
-using System.Drawing.Drawing2D;
-using System.Drawing;
-using System.Xml.Linq;
 
 namespace ProudPoppy.Controllers
 {
@@ -98,8 +92,8 @@ namespace ProudPoppy.Controllers
                     {
                         var variants = new List<ProductVariant>();
 
-                        foreach (var colour in item.Colour.Split(","))
-                        {
+                        //foreach (var colour in item.Colour.Split(","))
+                        //{
                             foreach (var size in item.Size.Split(","))
                             {
                                 variants.Add(new ProductVariant
@@ -107,47 +101,46 @@ namespace ProudPoppy.Controllers
                                     SKU = item.SKU,
                                     Price = string.IsNullOrEmpty(item.SalePrice) ? null : Convert.ToDecimal(item.SalePrice),
                                     CompareAtPrice = string.IsNullOrEmpty(item.RRP) ? null : Convert.ToDecimal(item.RRP),
-                                    Option1 = colour,
-                                    Option2 = size,
+                                    Option1 = size,
+                                    //Option2 = colour,
                                 });
                             }
-                        }
+                        //}
 
                         var productOptions = new List<ProductOption>();
 
                         productOptions.Add(new ProductOption
                         {
-                            Name = "Colour",
-                            Values = item.Colour.Split(','),
+                            Name = "Size",
+                            Values = item.Size.Split(','),
                             Position = 1
                         });
 
-                        productOptions.Add(new ProductOption
-                        {
-                            Name = "Size",
-                            Values = item.Size.Split(','),
-                            Position = 2
-                        });
+                        //productOptions.Add(new ProductOption
+                        //{
+                        //    Name = "Color",
+                        //    Values = item.Colour.Split(','),
+                        //    Position = 2
+                        //});
 
                         var product = await service.GetAsync(productDetails.ProductId);
-                        //var product = new Product();
 
-                        if (string.IsNullOrWhiteSpace(item.Name))
+                        if (!string.IsNullOrWhiteSpace(item.Name))
                             product.Title = item.Name;
 
-                        if (string.IsNullOrWhiteSpace(item.Description))
+                        if (!string.IsNullOrWhiteSpace(item.Description))
                             product.BodyHtml = item.Description;
 
-                        if (string.IsNullOrWhiteSpace(item.Brand))
+                        if (!string.IsNullOrWhiteSpace(item.Brand))
                             product.Vendor = item.Brand;
 
-                        if (string.IsNullOrWhiteSpace(item.Category))
+                        if (!string.IsNullOrWhiteSpace(item.Category))
                             product.ProductType = item.Category;
 
-                        if (string.IsNullOrWhiteSpace(item.Tags))
+                        if (!string.IsNullOrWhiteSpace(item.Tags))
                             product.Tags = item.Tags;
 
-                        if (string.IsNullOrWhiteSpace(item.Status.ToLower()))
+                        if (!string.IsNullOrWhiteSpace(item.Status.ToLower()))
                             product.Status = item.Status.ToLower();
 
                         if (variants.Any())
@@ -156,9 +149,11 @@ namespace ProudPoppy.Controllers
                         if (productOptions.Any())
                             product.Options = productOptions;
 
+                        product.PublishedScope = "global";
+
                         product = await service.UpdateAsync(productDetails.ProductId, product);
 
-                        if (string.IsNullOrWhiteSpace(item.CostPrice))
+                        if (!string.IsNullOrWhiteSpace(item.CostPrice))
                         {
                             var inventory = new Inventory();
 
@@ -239,7 +234,7 @@ namespace ProudPoppy.Controllers
             productDetails.Status = product.Status;
             productDetails.DateLastModified = DateTime.Now.ToString();
 
-            _context.Add(productDetails);
+            _context.Update(productDetails);
             await _context.SaveChangesAsync();
         }
     }

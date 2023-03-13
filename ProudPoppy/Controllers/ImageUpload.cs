@@ -107,16 +107,16 @@ namespace ProudPoppy.Controllers
                                         {
                                             var variant = variantId.Split("_");
                                             string variantIdName = variant[0];
-                                            string variantColourName = variant[1];
+                                            //string variantColourName = variant[1];
 
-                                            if (variantColourName == variantColour)
-                                            {
+                                            //if (variantColourName == variantColour)
+                                            //{
                                                 var productVariantService = new ProductVariantService(shopifyUrl, shopAccessToken);
                                                 var variantDetails = await productVariantService.UpdateAsync(Convert.ToInt64(variantIdName), new ProductVariant()
                                                 {
                                                     ImageId = image.Id
                                                 });
-                                            }
+                                            //}
                                         }
                                     }
                                 }

@@ -272,9 +272,6 @@ namespace ProudPoppy.Controllers
                         }
                     }
 
-                    //var variantIds = product.Variants.Any() ? string.Join(",", product.Variants.Select(x => x.Id.Value).ToArray()) : null;
-                    //var sizes = product.Variants.Any() ? string.Join(",", product.Variants.Select(x => x.Option1).ToArray()) : null;
-                    //var colours = product.Variants.Any() ? string.Join(",", product.Variants.Select(x => x.Option2).ToArray()) : null;
                     var productDetails = new ProductDetails
                     {
                         ProductId = product.Id.Value,
