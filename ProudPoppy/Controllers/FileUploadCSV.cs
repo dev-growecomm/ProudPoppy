@@ -189,7 +189,7 @@ namespace ProudPoppy.Controllers
                             }
                         }
 
-                        await UpdateRecordInDb(productDetails, product);
+                        await UpdateRecordInDb(productDetails, product, item.CostPrice);
                     }
                 }
 
@@ -208,7 +208,7 @@ namespace ProudPoppy.Controllers
             return productDetails;
         }
 
-        private async Task UpdateRecordInDb(ProductDetails productDetails, Product product)
+        private async Task UpdateRecordInDb(ProductDetails productDetails, Product product, string costPrice)
         {
             string variantIds = string.Empty;
             string sizes = string.Empty;
@@ -237,7 +237,7 @@ namespace ProudPoppy.Controllers
             productDetails.Category = product.ProductType;
             productDetails.Tags = product.Tags;
             productDetails.SalePrice = product.Variants.Any() ? product.Variants.First().Price.ToString() : null;
-            productDetails.CostPrice = product.Variants.Any() ? product.Variants.First().Price.ToString() : null;
+            productDetails.CostPrice = costPrice;
             productDetails.RRP = product.Variants.Any() ? product.Variants.First().CompareAtPrice.ToString() : null;
             productDetails.Size = sizes;
             productDetails.Colour = colours.Any() ? string.Join(",", colours) : null;
