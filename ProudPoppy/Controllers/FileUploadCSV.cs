@@ -91,9 +91,12 @@ namespace ProudPoppy.Controllers
                     if (productDetails != null && productDetails.ProductId > 0)
                     {
                         var variants = new List<ProductVariant>();
+                        var productOptions = new List<ProductOption>();
 
-                        //foreach (var colour in item.Colour.Split(","))
-                        //{
+                        if (!string.IsNullOrWhiteSpace(item.Size))
+                        {
+                            //foreach (var colour in item.Colour.Split(","))
+                            //{
                             foreach (var size in item.Size.Split(","))
                             {
                                 variants.Add(new ProductVariant
@@ -105,31 +108,34 @@ namespace ProudPoppy.Controllers
                                     //Option2 = colour,
                                 });
                             }
-                        //}
+                            //}
 
-                        var productOptions = new List<ProductOption>();
+                            productOptions.Add(new ProductOption
+                            {
+                                Name = "Size",
+                                Values = item.Size.Split(','),
+                                Position = 1
+                            });
 
-                        productOptions.Add(new ProductOption
-                        {
-                            Name = "Size",
-                            Values = item.Size.Split(','),
-                            Position = 1
-                        });
-
-                        //productOptions.Add(new ProductOption
-                        //{
-                        //    Name = "Color",
-                        //    Values = item.Colour.Split(','),
-                        //    Position = 2
-                        //});
-
+                            //productOptions.Add(new ProductOption
+                            //{
+                            //    Name = "Color",
+                            //    Values = item.Colour.Split(','),
+                            //    Position = 2
+                            //});
+                        }
                         var product = await service.GetAsync(productDetails.ProductId);
 
                         if (!string.IsNullOrWhiteSpace(item.Name))
                             product.Title = item.Name;
 
                         if (!string.IsNullOrWhiteSpace(item.Description))
-                            product.BodyHtml = item.Description;
+                        {
+                            StringBuilder stringBuilder = new StringBuilder();
+                            stringBuilder.Append(item.Description);
+                            stringBuilder.Append(product.BodyHtml);
+                            product.BodyHtml = stringBuilder.ToString();
+                        }
 
                         if (!string.IsNullOrWhiteSpace(item.Brand))
                             product.Vendor = item.Brand;
@@ -144,7 +150,11 @@ namespace ProudPoppy.Controllers
                             product.Status = item.Status.ToLower();
 
                         if (variants.Any())
+                        {
+                            var existingVariants = product.Variants;
+                            variants.AddRange(existingVariants);
                             product.Variants = variants;
+                        }
 
                         if (productOptions.Any())
                             product.Options = productOptions;
@@ -194,7 +204,7 @@ namespace ProudPoppy.Controllers
 
         private ProductDetails CheckIsRecordExist(ProductIngestCsv item)
         {
-            ProductDetails productDetails = _context.ProductDetails.FirstOrDefault(e => e.SKU == item.SKU);
+            ProductDetails productDetails = _context.ProductDetails.FirstOrDefault(e => e.SKU.Contains(item.SKU));
             return productDetails;
         }
 
