@@ -71,7 +71,7 @@ namespace ProudPoppy.Controllers
                             //string variantColour = fileNameSplit[1];
                             string position = fileNameSplit[1].Split(".")[0];
 
-                            var productDetails = await _context.ProductDetails.FirstOrDefaultAsync(m => m.SKU == sku);
+                            var productDetails = await _context.ProductDetails.FirstOrDefaultAsync(m => m.SKU.Contains(sku));
 
                             string shopifyUrl = _configuration.GetSection("sopify:shopifyUrl").Value;
                             string shopAccessToken = _configuration.GetSection("sopify:shopAccessToken").Value;
