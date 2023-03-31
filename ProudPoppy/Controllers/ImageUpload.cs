@@ -8,6 +8,7 @@ using ProudPoppy.Data;
 using ProudPoppy.Models;
 using ShopifySharp;
 using System.Net;
+using System.Web;
 
 namespace ProudPoppy.Controllers
 {
@@ -92,7 +93,7 @@ namespace ProudPoppy.Controllers
                                         Namespace = "tags"
                                     }
                                 },
-                                    Src = imageUrl,
+                                    Src = HttpUtility.UrlPathEncode(imageUrl),
                                     Alt = item.FileName,
                                     Position = Convert.ToInt32(position)
                                 });

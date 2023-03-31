@@ -131,10 +131,7 @@ namespace ProudPoppy.Controllers
 
                         if (!string.IsNullOrWhiteSpace(item.Description))
                         {
-                            StringBuilder stringBuilder = new StringBuilder();
-                            stringBuilder.Append(item.Description);
-                            stringBuilder.Append(product.BodyHtml);
-                            product.BodyHtml = stringBuilder.ToString();
+                            product.BodyHtml = item.Description;
                         }
 
                         if (!string.IsNullOrWhiteSpace(item.Brand))
@@ -256,27 +253,31 @@ namespace ProudPoppy.Controllers
 
             var inventory = new Inventory();
 
-            List<string> variantIds = new List<string>();
-            foreach (var variant in product.Variants)
+
+            List<long> variantIds = product.Variants.Select(x => x.Id.Value).ToList();
+
+            if (!string.IsNullOrWhiteSpace(item.CostPrice))
             {
-                variantIds.Add($"{variant.Id.Value}");
-                inventory.InventoryItems = new InventoryItems
+                foreach (var variant in product.Variants)
                 {
-                    id = variant.InventoryItemId.Value,
-                    sku = variant.SKU,
-                    cost = Convert.ToDecimal(item.CostPrice),
-                    tracked = true
-                };
+                    inventory.InventoryItems = new InventoryItems
+                    {
+                        id = variant.InventoryItemId.Value,
+                        sku = variant.SKU,
+                        cost = Convert.ToDecimal(item.CostPrice),
+                        tracked = true
+                    };
 
-                string jsonData = JsonConvert.SerializeObject(inventory);
+                    string jsonData = JsonConvert.SerializeObject(inventory);
 
-                var request = new RestRequest($"{shopifyUrl}/admin/api/2023-01/inventory_items/{inventory.InventoryItems.id}.json", Method.Put)
-                .AddHeader("X-Shopify-Access-Token", shopAccessToken)
-                                 .AddJsonBody(jsonData);
+                    var request = new RestRequest($"{shopifyUrl}/admin/api/2023-01/inventory_items/{inventory.InventoryItems.id}.json", Method.Put)
+                    .AddHeader("X-Shopify-Access-Token", shopAccessToken)
+                                     .AddJsonBody(jsonData);
 
-                var _restClient = new RestClient().AddDefaultHeader("Content-Type", "application/json");
+                    var _restClient = new RestClient().AddDefaultHeader("Content-Type", "application/json");
 
-                var response = _restClient.Put<dynamic>(request);
+                    var response = _restClient.Put<dynamic>(request);
+                }
             }
 
             await SaveRecordInDb(item, product.Id.Value, variantIds);
@@ -328,9 +329,8 @@ namespace ProudPoppy.Controllers
             await _context.SaveChangesAsync();
         }
 
-        private async Task SaveRecordInDb(ProductIngestCsv item, long productId, List<string> variantIds)
+        private async Task SaveRecordInDb(ProductIngestCsv item, long productId, List<long> variantIds)
         {
-
             var productDetails = new ProductDetails
             {
                 ProductId = productId,
